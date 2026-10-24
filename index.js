@@ -20,9 +20,17 @@ try {
   }
   process.exit(1)
 }
+const crypto = require('crypto')
 const express = require('express')
 const multer = require('multer')
 const { json } = require('body-parser')
+
+function safeTokenCompare (a, b) {
+  const bufA = Buffer.from(String(a ?? ''))
+  const bufB = Buffer.from(String(b ?? ''))
+  if (bufA.length !== bufB.length) return false
+  return crypto.timingSafeEqual(bufA, bufB)
+}
 
 const app = express()
 const upload = multer()
@@ -47,7 +55,7 @@ app.post('/message', upload.none(), json(), async (req, res) => {
     logger.error('NOTIFICATION', error)
     return res.json(error).status(400)
   }
-  if (topics[topic].ntfyToken !== ntfyToken) {
+  if (!safeTokenCompare(topics[topic].ntfyToken, ntfyToken)) {
     const error = {
       error: 'Unauthorized',
       errorCode: 401,
